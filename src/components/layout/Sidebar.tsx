@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -17,7 +17,18 @@ const navItems = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Handle logout: clear session and redirect to login
+    const handleLogout = () => {
+        // Clear any auth tokens/session data
+        // localStorage.removeItem('authToken'); // Uncomment when auth is implemented
+        // sessionStorage.clear(); // Uncomment when auth is implemented
+
+        // Redirect to login page
+        router.push('/login');
+    };
 
     return (
         <>
@@ -53,9 +64,35 @@ export default function Sidebar() {
                 "lg:translate-x-0"
             )}>
                 {/* Logo/Brand */}
-                <div className="p-6 border-b border-[#e5e7eb]">
-                    <h1 className="text-xl font-bold text-[#059669]">ASM Portal</h1>
-                    <p className="text-xs text-[#6b7280] mt-1">Internal Dashboard</p>
+                <div className="p-6 border-b border-[#e5e7eb] flex items-center justify-center">
+                    <Link
+                        href="/dashboard"
+                        className="cursor-pointer group"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        <div className="bg-[#059669] rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm transition-all duration-300 ease-in-out group-hover:bg-[#d1fae5] group-hover:shadow-md group-hover:-translate-y-0.5">
+                            {/* Graph/Chart Icon */}
+                            <svg
+                                className="w-6 h-6 text-white group-hover:text-[#059669]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2.5}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
+                                />
+                                <polyline points="22,12 18,8 13,13 9,9" />
+                            </svg>
+
+                            {/* Text */}
+                            <div className="text-white font-bold text-sm leading-tight tracking-wide group-hover:text-[#1f2937]">
+                                SALES &<br />MARKETING
+                            </div>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Navigation */}
@@ -86,9 +123,25 @@ export default function Sidebar() {
 
                 {/* Logout Button */}
                 <div className="p-4 border-t border-[#e5e7eb]">
-                    <button className="flex items-center gap-2 w-full px-4 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
-                        <span>🚪</span>
-                        <span className="text-sm font-medium">Logout</span>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#fee2e2] text-[#dc2626] rounded-lg hover:bg-[#fecaca] transition-all duration-200 cursor-pointer"
+                    >
+                        {/* Logout Arrow Icon */}
+                        <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
+                        </svg>
+                        <span className="text-sm font-bold">Logout</span>
                     </button>
                 </div>
             </aside>

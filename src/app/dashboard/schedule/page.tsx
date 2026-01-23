@@ -170,19 +170,19 @@ export default function SchedulePage() {
                                     <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Date
                                     </th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
+                                    <th className="hidden md:table-cell px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Day
                                     </th>
                                     <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Batch
                                     </th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
+                                    <th className="hidden md:table-cell px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Subject
                                     </th>
                                     <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Time
                                     </th>
-                                    <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
+                                    <th className="hidden md:table-cell px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
                                         Status
                                     </th>
                                 </tr>
@@ -196,19 +196,19 @@ export default function SchedulePage() {
                                         <td className="px-6 py-4 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">
                                             {formatDateShort(schedule.date)}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-[#1f2937] border border-[#e5e7eb] text-center">
+                                        <td className="hidden md:table-cell px-6 py-4 text-sm text-[#1f2937] border border-[#e5e7eb] text-center">
                                             {schedule.day}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">
                                             {schedule.batch}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-[#1f2937] border border-[#e5e7eb] text-center">
+                                        <td className="hidden md:table-cell px-6 py-4 text-sm text-[#1f2937] border border-[#e5e7eb] text-center">
                                             {schedule.subject}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-[#374151] border border-[#e5e7eb] text-center">
                                             {schedule.time}
                                         </td>
-                                        <td className="px-6 py-4 border border-[#e5e7eb] text-center">
+                                        <td className="hidden md:table-cell px-6 py-4 border border-[#e5e7eb] text-center">
                                             {getStatusBadge(schedule)}
                                         </td>
                                     </tr>
