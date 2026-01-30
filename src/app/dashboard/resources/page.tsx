@@ -1,103 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card, { CardBody } from "@/components/ui/Card";
 import { formatDateShort } from "@/lib/utils";
+import { getAllResources, addResource, Resource } from "@/services/resourceService";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Resource interface
-interface Resource {
-    id: string;
-    title: string;
-    category: "Course Module" | "Class Routine" | "Notes" | "Assignment" | "Exam / Practice";
-    uploadedBy: string;
-    uploadDate: string;
-    description?: string;
-    fileUrl?: string;
-    externalLink?: string;
-}
-
-// Mock resources with new categories
-const initialResources: Resource[] = [
-    {
-        id: "R001",
-        title: "Physics Chapter 1 - Motion",
-        category: "Course Module",
-        uploadedBy: "Karim Uddin",
-        uploadDate: "2026-01-15",
-        description: "Complete chapter notes with examples and practice problems",
-    },
-    {
-        id: "R002",
-        title: "Chemistry Organic Compounds",
-        category: "Course Module",
-        uploadedBy: "Shahid Ahmed",
-        uploadDate: "2026-01-12",
-        description: "Detailed study material on organic chemistry fundamentals",
-    },
-    {
-        id: "R003",
-        title: "Batch 06 Weekly Routine",
-        category: "Class Routine",
-        uploadedBy: "Abul Hayat",
-        uploadDate: "2026-01-10",
-        description: "Complete weekly class schedule for Batch 06",
-    },
-    {
-        id: "R004",
-        title: "Batch 07 Monthly Schedule",
-        category: "Class Routine",
-        uploadedBy: "Mohammad Rahman",
-        uploadDate: "2026-01-08",
-    },
-    {
-        id: "R005",
-        title: "Biology Lab Experiment Notes",
-        category: "Notes",
-        uploadedBy: "Rafiqul Islam",
-        uploadDate: "2026-01-18",
-        description: "Detailed lab experiment procedures and observations",
-    },
-    {
-        id: "R006",
-        title: "Mathematics Calculus Notes",
-        category: "Notes",
-        uploadedBy: "Karim Uddin",
-        uploadDate: "2026-01-16",
-        description: "Comprehensive notes on differential and integral calculus",
-    },
-    {
-        id: "R007",
-        title: "English Grammar Assignment",
-        category: "Assignment",
-        uploadedBy: "Mohammad Rahman",
-        uploadDate: "2026-01-20",
-        description: "Grammar exercises and composition tasks",
-    },
-    {
-        id: "R008",
-        title: "Physics Problem Set 3",
-        category: "Assignment",
-        uploadedBy: "Karim Uddin",
-        uploadDate: "2026-01-19",
-    },
-    {
-        id: "R009",
-        title: "Chemistry MCQ Practice",
-        category: "Exam / Practice",
-        uploadedBy: "Shahid Ahmed",
-        uploadDate: "2026-01-17",
-        description: "100 MCQ questions for exam preparation",
-    },
-    {
-        id: "R010",
-        title: "Biology Model Test Papers",
-        category: "Exam / Practice",
-        uploadedBy: "Rafiqul Islam",
-        uploadDate: "2026-01-14",
-        description: "Previous year question patterns and solutions",
-    },
-];
-
+// Categories definition
 const categories: Resource["category"][] = [
     "Course Module",
     "Class Routine",
@@ -107,14 +16,35 @@ const categories: Resource["category"][] = [
 ];
 
 export default function ResourcesPage() {
-    const [resources, setResources] = useState<Resource[]>(initialResources);
+    const { user, userProfile } = useAuth();
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Form state
     const [newResource, setNewResource] = useState({
         title: "",
         category: "Course Module" as Resource["category"],
         description: "",
-        externalLink: "",
+        fileUrl: "",
     });
+
+    // Fetch resources on mount
+    const fetchResources = async () => {
+        try {
+            const data = await getAllResources();
+            setResources(data);
+        } catch (error) {
+            console.error("Failed to load resources", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchResources();
+    }, []);
 
     // Group resources by category
     const groupedResources = categories.map(category => ({
@@ -122,28 +52,48 @@ export default function ResourcesPage() {
         resources: resources.filter(r => r.category === category)
     }));
 
-    const handleAddResource = (e: React.FormEvent) => {
+    const handleAddResource = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const resource: Resource = {
-            id: `R${String(resources.length + 1).padStart(3, '0')}`,
-            title: newResource.title,
-            category: newResource.category,
-            uploadedBy: "Abul Hayat",
-            uploadDate: new Date().toISOString().split('T')[0],
-            description: newResource.description || undefined,
-            externalLink: newResource.externalLink || undefined,
-        };
+        if (!user) {
+            alert("You must be logged in to add a resource.");
+            return;
+        }
 
-        setResources([resource, ...resources]);
-        setIsModalOpen(false);
-        setNewResource({
-            title: "",
-            category: "Course Module",
-            description: "",
-            externalLink: "",
-        });
+        setIsSubmitting(true);
+        try {
+            const resourceData = {
+                title: newResource.title,
+                category: newResource.category,
+                uploadedByUid: user.uid,
+                uploadedByName: userProfile?.displayName || user.displayName || "Unknown Teacher",
+                description: newResource.description || undefined,
+                fileUrl: newResource.fileUrl,
+            };
+
+            await addResource(resourceData);
+
+            // Refresh list
+            await fetchResources();
+
+            // Reset form
+            setIsModalOpen(false);
+            setNewResource({
+                title: "",
+                category: "Course Module",
+                description: "",
+                fileUrl: "",
+            });
+        } catch (error) {
+            console.error("Failed to add resource", error);
+            alert("Failed to add resource. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    // Helper to get direct image URL from Google Drive link (reusing logic if needed, but for files we usually just open them)
+    // For file resources, we just open the link.
 
     return (
         <div className="space-y-8">
@@ -169,62 +119,82 @@ export default function ResourcesPage() {
                 </button>
             </div>
 
-            {/* Category-wise Resource Sections */}
-            {groupedResources.map(({ category, resources: categoryResources }) => (
-                categoryResources.length > 0 && (
-                    <div key={category} className="space-y-4">
-                        {/* Category Heading */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-1 h-8 bg-[#059669] rounded-full"></div>
-                            <h2 className="text-2xl font-bold text-[#1f2937]">
-                                {category}
-                            </h2>
-                        </div>
+            {loading ? (
+                <div className="text-center py-20">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#059669]"></div>
+                    <p className="mt-4 text-[#6b7280]">Loading resources...</p>
+                </div>
+            ) : resources.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-lg shadow-sm">
+                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="text-lg font-medium text-gray-900">No resources yet</h3>
+                    <p className="mt-1 text-gray-500">Get started by adding a new resource.</p>
+                </div>
+            ) : (
+                /* Category-wise Resource Sections */
+                groupedResources.map(({ category, resources: categoryResources }) => (
+                    categoryResources.length > 0 && (
+                        <div key={category} className="space-y-4">
+                            {/* Category Heading */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-1 h-8 bg-[#059669] rounded-full"></div>
+                                <h2 className="text-2xl font-bold text-[#1f2937]">
+                                    {category}
+                                </h2>
+                            </div>
 
-                        {/* Resource Cards Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {categoryResources.map((resource) => (
-                                <Card key={resource.id} className="hover:shadow-lg transition-shadow h-full">
-                                    <CardBody className="p-6 flex flex-col">
-                                        {/* Title */}
-                                        <h3 className="text-lg font-semibold text-[#1f2937] mb-3">
-                                            {resource.title}
-                                        </h3>
+                            {/* Resource Cards Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {categoryResources.map((resource) => (
+                                    <Card key={resource.id} className="hover:shadow-lg transition-shadow h-full">
+                                        <CardBody className="p-6 flex flex-col h-full">
+                                            {/* Title */}
+                                            <h3 className="text-lg font-semibold text-[#1f2937] mb-3">
+                                                {resource.title}
+                                            </h3>
 
-                                        {/* Description */}
-                                        {resource.description && (
-                                            <p className="text-sm text-[#6b7280] mb-4 line-clamp-2">
-                                                {resource.description}
-                                            </p>
-                                        )}
+                                            {/* Description */}
+                                            {resource.description && (
+                                                <p className="text-sm text-[#6b7280] mb-4 line-clamp-2 flex-grow">
+                                                    {resource.description}
+                                                </p>
+                                            )}
 
-                                        {/* Meta Information */}
-                                        <div className="space-y-2 mb-4 mt-auto">
-                                            <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                                </svg>
-                                                <span>Uploaded by: {resource.uploadedBy}</span>
+                                            {/* Meta Information */}
+                                            <div className="space-y-2 mb-4 mt-auto">
+                                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                    </svg>
+                                                    <span>Uploaded by: {resource.uploadedByName}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                                    </svg>
+                                                    <span>Date: {formatDateShort(resource.uploadDate)}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                                </svg>
-                                                <span>Date: {formatDateShort(resource.uploadDate)}</span>
-                                            </div>
-                                        </div>
 
-                                        {/* Action Button */}
-                                        <button className="w-full px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors">
-                                            {resource.externalLink ? "Open Link" : "View / Download"}
-                                        </button>
-                                    </CardBody>
-                                </Card>
-                            ))}
+                                            {/* Action Button */}
+                                            <a
+                                                href={resource.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block w-full text-center px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors"
+                                            >
+                                                View / Download
+                                            </a>
+                                        </CardBody>
+                                    </Card>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )
-            ))}
+                    )
+                ))
+            )}
 
             {/* Add Resource Modal */}
             {isModalOpen && (
@@ -294,17 +264,18 @@ export default function ResourcesPage() {
                             {/* File Upload or External Link */}
                             <div>
                                 <label className="block text-sm font-medium text-[#1f2937] mb-2">
-                                    Upload File or Add Link
+                                    File URL / Drive Link *
                                 </label>
                                 <input
                                     type="text"
-                                    value={newResource.externalLink}
-                                    onChange={(e) => setNewResource({ ...newResource, externalLink: e.target.value })}
+                                    required
+                                    value={newResource.fileUrl}
+                                    onChange={(e) => setNewResource({ ...newResource, fileUrl: e.target.value })}
                                     className="w-full px-4 py-2 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#059669]"
-                                    placeholder="Enter Drive link or external URL"
+                                    placeholder="Enter Google Drive or external link"
                                 />
                                 <p className="text-xs text-[#6b7280] mt-1">
-                                    Or upload a file (feature coming soon)
+                                    Paste the sharing link from Google Drive here.
                                 </p>
                             </div>
 
@@ -319,9 +290,10 @@ export default function ResourcesPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors"
+                                    disabled={isSubmitting}
+                                    className="flex-1 px-4 py-2 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors disabled:opacity-50"
                                 >
-                                    Add Resource
+                                    {isSubmitting ? "Adding..." : "Add Resource"}
                                 </button>
                             </div>
                         </form>

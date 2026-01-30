@@ -1,24 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import * as feedbackService from "@/services/feedbackService";
 
 export default function PublicFeedbackPage() {
     const [batchName, setBatchName] = useState("");
     const [feedback, setFeedback] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError("");
+        setIsSubmitting(true);
 
-        // In real implementation, this would send to backend
-        console.log("Feedback submitted:", { batchName, feedback, status: "Pending" });
+        try {
+            await feedbackService.submitFeedback(batchName, feedback);
+            setIsSubmitted(true);
+            setBatchName("");
+            setFeedback("");
 
-        setIsSubmitted(true);
-        setBatchName("");
-        setFeedback("");
-
-        // Reset success message after 3 seconds
-        setTimeout(() => setIsSubmitted(false), 3000);
+            // Reset success message after 5 seconds
+            setTimeout(() => setIsSubmitted(false), 5000);
+        } catch (err) {
+            console.error("Failed to submit feedback:", err);
+            setError("Failed to submit feedback. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -60,6 +70,15 @@ export default function PublicFeedbackPage() {
                             <div className="bg-[#d1fae5] border-l-4 border-[#059669] p-4 mb-6 rounded">
                                 <p className="text-[#059669] font-semibold">
                                     ✓ Feedback submitted successfully! It will be reviewed by admin.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+                                <p className="text-red-600 font-semibold">
+                                    {error}
                                 </p>
                             </div>
                         )}
@@ -121,12 +140,25 @@ export default function PublicFeedbackPage() {
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-[#059669] to-[#10b981] text-white font-bold py-4 px-6 rounded-xl hover:from-[#047857] hover:to-[#059669] transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-lg"
+                                disabled={isSubmitting}
+                                className="w-full bg-gradient-to-r from-[#059669] to-[#10b981] text-white font-bold py-4 px-6 rounded-xl hover:from-[#047857] hover:to-[#059669] transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                                </svg>
-                                Submit Feedback
+                                {isSubmitting ? (
+                                    <>
+                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                        </svg>
+                                        Submit Feedback
+                                    </>
+                                )}
                             </button>
                         </form>
                     </div>

@@ -1,82 +1,174 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card, { CardBody } from "@/components/ui/Card";
 import { formatDateShort } from "@/lib/utils";
-
-// Full month of class schedule data (January 2026)
-const initialScheduleData = [
-    { id: "CS001", date: "2026-01-02", day: "Thursday", batch: "HSC 2026 - Science A", subject: "Physics", time: "10:00 AM - 11:30 AM", status: "Completed" as const },
-    { id: "CS002", date: "2026-01-02", day: "Thursday", batch: "SSC 2026 - A", subject: "Mathematics", time: "12:00 PM - 01:30 PM", status: "Completed" as const },
-    { id: "CS003", date: "2026-01-03", day: "Friday", batch: "HSC 2026 - Commerce", subject: "Accounting", time: "02:00 PM - 03:30 PM", status: "Completed" as const },
-    { id: "CS004", date: "2026-01-05", day: "Sunday", batch: "HSC 2026 - Science B", subject: "Chemistry", time: "10:00 AM - 11:30 AM", status: "Completed" as const },
-    { id: "CS005", date: "2026-01-20", day: "Monday", batch: "SSC 2026 - B", subject: "English", time: "09:00 AM - 10:30 AM", status: "Completed" as const },
-    { id: "CS006", date: "2026-01-21", day: "Tuesday", batch: "HSC 2026 - Science A", subject: "Biology", time: "11:00 AM - 12:30 PM", status: "Completed" as const },
-    { id: "CS021", date: "2026-01-23", day: "Thursday", batch: "SSC 2026 - B", subject: "English", time: "09:00 AM - 10:30 AM", status: "Today" as const },
-    { id: "CS022", date: "2026-01-23", day: "Thursday", batch: "HSC 2026 - Science B", subject: "Chemistry", time: "11:00 AM - 12:30 PM", status: "Today" as const },
-    { id: "CS023", date: "2026-01-23", day: "Thursday", batch: "HSC 2026 - Commerce", subject: "Economics", time: "01:00 PM - 02:30 PM", status: "Today" as const },
-    { id: "CS024", date: "2026-01-24", day: "Friday", batch: "SSC 2026 - A", subject: "Mathematics", time: "10:00 AM - 11:30 AM", status: "Upcoming" as const },
-    { id: "CS025", date: "2026-01-26", day: "Sunday", batch: "HSC 2026 - Science A", subject: "Biology", time: "09:00 AM - 10:30 AM", status: "Upcoming" as const },
-    { id: "CS026", date: "2026-01-27", day: "Monday", batch: "SSC 2026 - B", subject: "Science", time: "11:00 AM - 12:30 PM", status: "Upcoming" as const },
-    { id: "CS027", date: "2026-01-28", day: "Tuesday", batch: "HSC 2026 - Science A", subject: "Physics", time: "02:00 PM - 03:30 PM", status: "Upcoming" as const },
-    { id: "CS028", date: "2026-01-29", day: "Wednesday", batch: "HSC 2026 - Commerce", subject: "Accounting", time: "10:00 AM - 11:30 AM", status: "Upcoming" as const },
-    { id: "CS029", date: "2026-01-30", day: "Thursday", batch: "SSC 2026 - A", subject: "English", time: "09:00 AM - 10:30 AM", status: "Upcoming" as const },
-    { id: "CS030", date: "2026-01-31", day: "Friday", batch: "HSC 2026 - Science B", subject: "Chemistry", time: "11:00 AM - 12:30 PM", status: "Upcoming" as const },
-    { id: "CS031", date: "2026-01-22", day: "Wednesday", batch: "SSC 2026 - A", subject: "ICT", time: "02:00 PM - 03:30 PM", status: "Pending" as const },
-];
-
-type ScheduleStatus = "Completed" | "Today" | "Upcoming" | "Pending" | "RequestToComplete";
-
-interface Schedule {
-    id: string;
-    date: string;
-    day: string;
-    batch: string;
-    subject: string;
-    time: string;
-    status: ScheduleStatus;
-}
+import { getClassesByTeacherId, requestClassCompletion, ClassSchedule } from "@/services/scheduleService";
+import { useAuth } from "@/contexts/AuthContext";
+import { getClassRoutines, ClassRoutine } from "@/services/routinesService";
 
 export default function SchedulePage() {
-    const [scheduleData, setScheduleData] = useState<Schedule[]>(initialScheduleData);
+    const [scheduleData, setScheduleData] = useState<ClassSchedule[]>([]);
+    const [routines, setRoutines] = useState<ClassRoutine[]>([]);
+    // Batch Stats State
+    const [batchStats, setBatchStats] = useState<Record<string, { subjectName: string; classCount: number }[]>>({});
+    const [batchStatsLoading, setBatchStatsLoading] = useState(true);
+
+    const [loading, setLoading] = useState(true);
+    const [routinesLoading, setRoutinesLoading] = useState(true);
     const [showAll, setShowAll] = useState(false);
     const [expandedPending, setExpandedPending] = useState<string | null>(null);
+    const { userProfile, loading: authLoading } = useAuth();
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
-    const today = "2026-01-23"; // Current date
+    // We can rely on service logic for "Today" so no need to calculate date strictly here 
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch Class Schedule (Google Sheet)
+    useEffect(() => {
+        const fetchSchedule = async () => {
+            if (authLoading) return; // Wait for auth
+
+            if (!userProfile?.teacherId) {
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            const data = await getClassesByTeacherId(userProfile.teacherId);
+            setScheduleData(data);
+            setLoading(false);
+        };
+        fetchSchedule();
+    }, [userProfile, authLoading]);
+
+    // Fetch Class Routines (Firestore)
+    useEffect(() => {
+        const fetchRoutines = async () => {
+            setRoutinesLoading(true);
+            const data = await getClassRoutines();
+            setRoutines(data);
+            setRoutinesLoading(false);
+        };
+        fetchRoutines();
+    }, []);
+
+    // Fetch Batch Stats (Google Sheet Backend)
+    useEffect(() => {
+        const fetchBatchStats = async () => {
+            setBatchStatsLoading(true);
+            try {
+                const res = await fetch('/api/batch-stats');
+                const json = await res.json();
+                if (json.success && json.data) {
+                    setBatchStats(json.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch batch stats", error);
+            } finally {
+                setBatchStatsLoading(false);
+            }
+        };
+        fetchBatchStats();
+    }, []);
 
     // Filter out completed classes (past dates that are completed)
+    // BUT show "Pending" classes (past dates that are NOT completed)
     const visibleSchedule = scheduleData.filter(schedule => {
+        // Hide ONLY if status is "Completed" AND date is in the past
         if (schedule.status === "Completed" && schedule.date < today) {
-            return false; // Hide old completed classes
+            return false;
         }
         return true;
     });
 
     const displayedSchedule = showAll ? visibleSchedule : visibleSchedule.slice(0, 5);
 
-    const handleDoneClick = (id: string) => {
-        setScheduleData(prevData =>
-            prevData.map(item =>
-                item.id === id ? { ...item, status: "Completed" as const } : item
-            )
+    const handleDoneClick = async (index: number) => {
+        // Optimistic Update
+        const targetSchedule = displayedSchedule[index];
+        if (!targetSchedule) return;
+
+        // Visual feedback immediately
+        const updatedSchedule = [...scheduleData];
+        // Find the correct item in full list (displayedSchedule is a slice)
+        const realIndex = scheduleData.findIndex(s =>
+            s.date === targetSchedule.date &&
+            s.time === targetSchedule.time &&
+            s.batch === targetSchedule.batch &&
+            s.subject === targetSchedule.subject
         );
+
+        if (realIndex === -1) return;
+
+        // Optimistically set to completed
+        const previousStatus = updatedSchedule[realIndex].status;
+        updatedSchedule[realIndex] = { ...updatedSchedule[realIndex], status: "Completed" };
+        setScheduleData(updatedSchedule);
+
+        try {
+            const res = await fetch('/api/schedule', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    teacherId: userProfile?.teacherId,
+                    date: targetSchedule.date,
+                    time: targetSchedule.time,
+                    status: "Completed"
+                })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                // Revert if failed
+                console.error("Failed to mark done:", json.error);
+                alert("Failed to update status. Please try again.");
+                updatedSchedule[realIndex] = { ...updatedSchedule[realIndex], status: previousStatus };
+                setScheduleData([...updatedSchedule]);
+            }
+        } catch (error) {
+            console.error("Network error marking done:", error);
+            alert("Network error. Please check your connection.");
+            updatedSchedule[realIndex] = { ...updatedSchedule[realIndex], status: previousStatus };
+            setScheduleData([...updatedSchedule]);
+        }
     };
 
-    const handleRequestToComplete = (id: string) => {
-        setScheduleData(prevData =>
-            prevData.map(item =>
-                item.id === id ? { ...item, status: "RequestToComplete" as const } : item
-            )
-        );
+    const handleRequestToComplete = async (schedule: ClassSchedule) => {
         setExpandedPending(null);
-        // In real app, this would send request to backend/admin
+        if (!userProfile?.teacherId) return;
+
+        const uniqueKey = `${schedule.date}-${schedule.time}-${schedule.batch}`;
+        setProcessingId(uniqueKey);
+
+        try {
+            await requestClassCompletion(
+                userProfile.teacherId,
+                userProfile.displayName || "Teacher",
+                schedule
+            );
+
+            // Optimistic update
+            setScheduleData(prev => prev.map(s => {
+                if (s.date === schedule.date && s.time === schedule.time && s.batch === schedule.batch) {
+                    return { ...s, status: "Requested" as any };
+                }
+                return s;
+            }));
+        } catch (error) {
+            console.error(error);
+            alert("Failed to send request.");
+        } finally {
+            setProcessingId(null);
+        }
     };
 
-    const getStatusBadge = (schedule: Schedule) => {
+    const getStatusBadge = (schedule: ClassSchedule, index: number) => {
         if (schedule.status === "Today") {
             return (
                 <button
-                    onClick={() => handleDoneClick(schedule.id)}
+                    onClick={() => handleDoneClick(index)}
                     className="px-4 py-1.5 bg-[#059669] text-white text-sm font-medium rounded-full hover:bg-[#10b981] transition-colors"
                 >
                     Done
@@ -85,28 +177,32 @@ export default function SchedulePage() {
         }
 
         if (schedule.status === "Pending") {
+            const uniqueKey = `${schedule.date}-${schedule.time}-${schedule.batch}`; // Better uniqueness using batch
+            const isProcessing = processingId === uniqueKey;
+
             return (
                 <div className="inline-block relative">
                     {/* Show Request Button Above when expanded */}
-                    {expandedPending === schedule.id && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 animate-fadeIn">
+                    {expandedPending === uniqueKey && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 animate-fadeIn z-10">
                             <button
-                                onClick={() => handleRequestToComplete(schedule.id)}
+                                onClick={() => handleRequestToComplete(schedule)}
+                                disabled={isProcessing}
                                 className="px-4 py-2 bg-[#059669] text-white text-sm font-semibold rounded-lg hover:bg-[#10b981] transition-colors whitespace-nowrap shadow-md"
                             >
-                                Request to Complete
+                                {isProcessing ? "Sending..." : "Request to Complete"}
                             </button>
                         </div>
                     )}
 
                     {/* Pending Pill with Arrow */}
                     <button
-                        onClick={() => setExpandedPending(expandedPending === schedule.id ? null : schedule.id)}
+                        onClick={() => setExpandedPending(expandedPending === uniqueKey ? null : uniqueKey)}
                         className="px-4 py-1.5 bg-[#f59e0b] text-white text-sm font-medium rounded-full hover:bg-[#fb923c] transition-colors inline-flex items-center gap-2"
                     >
                         Pending
                         <svg
-                            className={`w-3 h-3 transition-transform ${expandedPending === schedule.id ? 'rotate-180' : ''}`}
+                            className={`w-3 h-3 transition-transform ${expandedPending === uniqueKey ? 'rotate-180' : ''}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -118,13 +214,11 @@ export default function SchedulePage() {
             );
         }
 
-        if (schedule.status === "RequestToComplete") {
+        // New 'Requested' State
+        if ((schedule.status as any) === "Requested") {
             return (
-                <span className="px-4 py-1.5 bg-[#3b82f6] text-white text-sm font-medium rounded-full inline-flex items-center gap-1">
-                    Request to Complete
-                    <svg className="w-3 h-3 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
+                <span className="px-4 py-1.5 bg-[#fcd34d] text-yellow-800 text-sm font-medium rounded-full cursor-not-allowed opacity-80">
+                    Requested
                 </span>
             );
         }
@@ -145,6 +239,24 @@ export default function SchedulePage() {
         );
     };
 
+    if (authLoading) {
+        return <div className="p-8 text-center text-[#6b7280]">Loading profile...</div>;
+    }
+
+    if (!userProfile?.teacherId) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center text-[#6b7280] bg-white rounded-lg shadow-sm border border-gray-100">
+                <div className="p-3 bg-yellow-100 rounded-full mb-4">
+                    <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h2 className="text-xl font-bold text-[#1f2937] mb-2">Teacher ID Missing</h2>
+                <p className="max-w-md mx-auto">Your account is not linked to any Teacher ID. Please ask the administrator to update your profile with your ID.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Header with Green Accent */}
@@ -155,7 +267,7 @@ export default function SchedulePage() {
                         Class Schedule
                     </h1>
                     <p className="text-[#6b7280] mt-1">
-                        Manage your monthly class schedule
+                        Viewing schedule for Teacher ID: <span className="font-mono font-medium text-[#111827]">{userProfile.teacherId}</span>
                     </p>
                 </div>
             </div>
@@ -188,9 +300,23 @@ export default function SchedulePage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {displayedSchedule.map((schedule, index) => (
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-12 text-center text-[#6b7280]">
+                                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#059669] mb-2"></div>
+                                            <p>Loading schedule from Sheet...</p>
+                                        </td>
+                                    </tr>
+                                ) : displayedSchedule.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-12 text-center text-[#6b7280]">
+                                            <p className="text-lg font-medium text-gray-900">No classes found</p>
+                                            <p className="text-sm mt-1">No scheduled classes found for ID <span className="font-mono">{userProfile.teacherId}</span>.</p>
+                                        </td>
+                                    </tr>
+                                ) : displayedSchedule.map((schedule, index) => (
                                     <tr
-                                        key={schedule.id}
+                                        key={index}
                                         className={schedule.status === "Today" ? "bg-[#d1fae5]/30" : index % 2 === 0 ? "bg-white" : "bg-[#f9fafb]"}
                                     >
                                         <td className="px-6 py-4 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">
@@ -209,7 +335,7 @@ export default function SchedulePage() {
                                             {schedule.time}
                                         </td>
                                         <td className="hidden md:table-cell px-6 py-4 border border-[#e5e7eb] text-center">
-                                            {getStatusBadge(schedule)}
+                                            {getStatusBadge(schedule, index)}
                                         </td>
                                     </tr>
                                 ))}
@@ -220,7 +346,7 @@ export default function SchedulePage() {
             </Card>
 
             {/* See More / See Less Button */}
-            {visibleSchedule.length > 5 && (
+            {!loading && visibleSchedule.length > 5 && (
                 <div className="flex justify-center">
                     <button
                         onClick={() => setShowAll(!showAll)}
@@ -248,109 +374,73 @@ export default function SchedulePage() {
 
                 {/* Routine Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Routine Card 1 */}
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardBody className="p-6">
-                            {/* Title */}
-                            <h3 className="text-base font-semibold text-[#1f2937] mb-3">
-                                Batch 07 – Full Class Routine
-                            </h3>
+                    {routinesLoading ? (
+                        // Skeleton / Loading State
+                        [1, 2, 3].map((i) => (
+                            <Card key={i} className="animate-pulse">
+                                <CardBody className="p-6">
+                                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+                                    <div className="h-10 bg-gray-200 rounded w-full"></div>
+                                </CardBody>
+                            </Card>
+                        ))
+                    ) : routines.length === 0 ? (
+                        <div className="col-span-full py-8 text-center text-[#6b7280] bg-white rounded-lg border border-gray-100 italic">
+                            No class routines uploaded yet.
+                        </div>
+                    ) : (
+                        routines.map((routine) => (
+                            <Card key={routine.id} className="hover:shadow-lg transition-shadow">
+                                <CardBody className="p-6">
+                                    {/* Title */}
+                                    <h3 className="text-base font-semibold text-[#1f2937] mb-3 line-clamp-2 min-h-[48px]">
+                                        {routine.title}
+                                    </h3>
 
-                            {/* Meta Information */}
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Uploaded by: Abul Hayat</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Date: 15/01/2026</span>
-                                </div>
-                            </div>
+                                    {/* Meta Information */}
+                                    <div className="space-y-2 mb-4">
+                                        <div className="flex items-center gap-2 text-sm text-[#6b7280]">
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                            <span className="truncate">Uploaded by: {routine.uploadedByName}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-[#6b7280]">
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                            </svg>
+                                            <span>Date: {formatDateShort(routine.createdAt.toISOString())}</span>
+                                        </div>
+                                    </div>
 
-                            {/* View Button */}
-                            <button className="w-full px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors">
-                                View / Download
-                            </button>
-                        </CardBody>
-                    </Card>
-
-                    {/* Routine Card 2 */}
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardBody className="p-6">
-                            {/* Title */}
-                            <h3 className="text-base font-semibold text-[#1f2937] mb-3">
-                                Batch 08 – Weekly Schedule
-                            </h3>
-
-                            {/* Meta Information */}
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Uploaded by: Karim Uddin</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Date: 10/01/2026</span>
-                                </div>
-                            </div>
-
-                            {/* View Button */}
-                            <button className="w-full px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors">
-                                View / Download
-                            </button>
-                        </CardBody>
-                    </Card>
-
-                    {/* Routine Card 3 */}
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardBody className="p-6">
-                            {/* Title */}
-                            <h3 className="text-base font-semibold text-[#1f2937] mb-3">
-                                January 2026 - Monthly Routine
-                            </h3>
-
-                            {/* Meta Information */}
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Uploaded by: Admin</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-[#6b7280]">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Date: 01/01/2026</span>
-                                </div>
-                            </div>
-
-                            {/* View Button */}
-                            <button className="w-full px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors">
-                                View / Download
-                            </button>
-                        </CardBody>
-                    </Card>
+                                    {/* View Button */}
+                                    <a
+                                        href={routine.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-full"
+                                    >
+                                        <button className="w-full px-4 py-3 bg-[#059669] text-white font-semibold rounded-lg hover:bg-[#10b981] transition-colors">
+                                            View / Download
+                                        </button>
+                                    </a>
+                                </CardBody>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </div>
 
-            {/* Subject-wise Class Count Section */}
+            {/* Batch-wise Class Count Section */}
             <div className="mt-12">
                 {/* Section Header */}
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-1 h-10 bg-[#059669] rounded-full"></div>
                     <div>
                         <h2 className="text-3xl font-bold text-[#1f2937]">
-                            Subject-wise Class Count
+                            Batch-wise Class Count
                         </h2>
                         <p className="text-[#6b7280] mt-1">
                             Track classes taken per subject for each batch
@@ -358,164 +448,77 @@ export default function SchedulePage() {
                     </div>
                 </div>
 
-                {/* Batch 06 Table */}
-                <div className="mb-8">
-                    <h3 className="text-xl font-semibold text-[#1f2937] mb-3">Batch 06</h3>
-                    <Card>
-                        <CardBody className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-[#1e3a5f]">
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-20">
-                                                #
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
-                                                Subject Name
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-48">
-                                                Classes Taken
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">1</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Physics</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">24</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">2</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Chemistry</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">22</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">3</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Mathematics</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">26</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">4</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Biology</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">20</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">5</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">English</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">18</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardBody>
-                    </Card>
-                </div>
+                {/* Dynamic Batch Tables */}
+                {Object.keys(batchStats).length === 0 && !loading && !batchStatsLoading ? (
+                    <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-100 italic">
+                        No batch data found. Please ensure tabs are named &apos;Batch_06&apos;, etc.
+                    </div>
+                ) : (
+                    Object.keys(batchStats).sort().map(batchName => {
+                        const subjects = batchStats[batchName];
 
-                {/* Batch 07 Table */}
-                <div className="mb-8">
-                    <h3 className="text-xl font-semibold text-[#1f2937] mb-3">Batch 07</h3>
-                    <Card>
-                        <CardBody className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-[#1e3a5f]">
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-20">
-                                                #
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
-                                                Subject Name
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-48">
-                                                Classes Taken
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">1</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Accounting</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">28</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">2</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Economics</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">25</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">3</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Business Studies</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">23</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">4</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Mathematics</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">22</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">5</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">English</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">20</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        return (
+                            <div key={batchName} className="mb-8">
+                                <h3 className="text-xl font-semibold text-[#1f2937] mb-3">{batchName}</h3>
+                                <Card>
+                                    <CardBody className="p-0">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse">
+                                                <thead>
+                                                    <tr className="bg-[#1e3a5f]">
+                                                        <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-20">
+                                                            #
+                                                        </th>
+                                                        <th className="px-6 py-4 text-start text-sm font-semibold text-white border border-[#2d5278]">
+                                                            Subject Name
+                                                        </th>
+                                                        <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-48">
+                                                            Classes Taken
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {batchStatsLoading ? (
+                                                        [1, 2, 3].map(i => (
+                                                            <tr key={i} className="animate-pulse bg-white">
+                                                                <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div></td>
+                                                                <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                                                                <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-12 mx-auto"></div></td>
+                                                            </tr>
+                                                        ))
+                                                    ) : subjects.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={3} className="px-6 py-8 text-center text-gray-500 italic">
+                                                                No classes found for this batch.
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        subjects.map((subject, idx) => (
+                                                            <tr
+                                                                key={subject.subjectName}
+                                                                className={idx % 2 === 0 ? "bg-white" : "bg-[#f9fafb]"}
+                                                            >
+                                                                <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">
+                                                                    {idx + 1}
+                                                                </td>
+                                                                <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">
+                                                                    {subject.subjectName}
+                                                                </td>
+                                                                <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">
+                                                                    {subject.classCount}
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </CardBody>
+                                </Card>
                             </div>
-                        </CardBody>
-                    </Card>
-                </div>
-
-                {/* Batch 08 Table */}
-                <div className="mb-8">
-                    <h3 className="text-xl font-semibold text-[#1f2937] mb-3">Batch 08</h3>
-                    <Card>
-                        <CardBody className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-[#1e3a5f]">
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-20">
-                                                #
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278]">
-                                                Subject Name
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-sm font-semibold text-white border border-[#2d5278] w-48">
-                                                Classes Taken
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">1</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Bangla</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">30</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">2</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">History</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">27</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">3</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Islamic Studies</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">24</td>
-                                        </tr>
-                                        <tr className="bg-[#f9fafb]">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">4</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">Social Science</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">21</td>
-                                        </tr>
-                                        <tr className="bg-white">
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-medium border border-[#e5e7eb] text-center">5</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] border border-[#e5e7eb]">English</td>
-                                            <td className="px-6 py-3 text-sm text-[#1f2937] font-semibold border border-[#e5e7eb] text-center">19</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardBody>
-                    </Card>
-                </div>
+                        );
+                    })
+                )}
             </div>
 
             {/* Animation Styles */}

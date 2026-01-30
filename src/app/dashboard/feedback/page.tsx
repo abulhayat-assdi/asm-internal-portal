@@ -1,74 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card, { CardBody } from "@/components/ui/Card";
-
-// Feedback interface
-interface Feedback {
-    id: string;
-    batchName: string;
-    message: string;
-    submittedDate: string;
-    status: "Approved" | "Pending";
-}
-
-// Mock feedback data
-const initialFeedback: Feedback[] = [
-    {
-        id: "F001",
-        batchName: "Batch_06",
-        message: "The teaching quality is excellent. Teachers are very supportive and explain concepts clearly. Would love to see more practical examples in class.",
-        submittedDate: "2026-01-23 14:30",
-        status: "Approved",
-    },
-    {
-        id: "F002",
-        batchName: "Batch_07",
-        message: "Great learning environment. The class schedule is well organized. Suggestion: Add more interactive sessions and group discussions.",
-        submittedDate: "2026-01-22 10:15",
-        status: "Approved",
-    },
-    {
-        id: "F003",
-        batchName: "Batch_08",
-        message: "Really enjoying the course content. Teachers are knowledgeable and approachable. Could we have more practice assignments?",
-        submittedDate: "2026-01-21 16:45",
-        status: "Pending",
-    },
-    {
-        id: "F004",
-        batchName: "Batch_06",
-        message: "The facilities are good but could be improved. More study materials would be helpful. Overall satisfied with the teaching.",
-        submittedDate: "2026-01-20 09:20",
-        status: "Approved",
-    },
-    {
-        id: "F005",
-        batchName: "Batch_07",
-        message: "Excellent course structure. Would appreciate if we could have weekend doubt-clearing sessions. Teachers are doing a great job!",
-        submittedDate: "2026-01-19 11:30",
-        status: "Pending",
-    },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import * as feedbackService from "@/services/feedbackService";
+import { formatDateShort } from "@/lib/utils";
 
 export default function FeedbackPage() {
-    const [feedbackList, setFeedbackList] = useState<Feedback[]>(initialFeedback);
-    const [isAdmin] = useState(true); // In real app, this would come from auth context
+    const { userProfile, user } = useAuth();
+    const [feedbackList, setFeedbackList] = useState<feedbackService.Feedback[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const isAdmin = userProfile?.role === "admin";
+
+    // Fetch Feedback
+    useEffect(() => {
+        const loadFeedback = async () => {
+            setLoading(true);
+            const data = await feedbackService.getFeedbackList();
+            setFeedbackList(data);
+            setLoading(false);
+        };
+        loadFeedback();
+    }, []);
 
     // Filter feedback based on role
     const visibleFeedback = isAdmin
         ? feedbackList
-        : feedbackList.filter(f => f.status === "Approved");
+        : feedbackList.filter((f) => f.status === "APPROVED");
 
-    const handleApprove = (id: string) => {
-        setFeedbackList(prev =>
-            prev.map(f => f.id === id ? { ...f, status: "Approved" as const } : f)
-        );
+    const handleApprove = async (id: string) => {
+        if (!user) return;
+        try {
+            await feedbackService.approveFeedback(id, user.uid);
+            // Optimistic update
+            setFeedbackList((prev) =>
+                prev.map((f) => (f.id === id ? { ...f, status: "APPROVED" } : f))
+            );
+        } catch (error) {
+            alert("Failed to approve feedback");
+        }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
+        if (!user) return;
         if (confirm("Are you sure you want to delete this feedback?")) {
-            setFeedbackList(prev => prev.filter(f => f.id !== id));
+            try {
+                await feedbackService.deleteFeedback(id, user.uid);
+                // Optimistic update
+                setFeedbackList((prev) => prev.filter((f) => f.id !== id));
+            } catch (error) {
+                alert("Failed to delete feedback");
+            }
         }
     };
 
@@ -90,8 +73,16 @@ export default function FeedbackPage() {
             {/* Student Feedback Form Link (Info Box) */}
             <div className="bg-[#d1fae5] border-l-4 border-[#059669] p-4 rounded-lg">
                 <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-[#059669] mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    <svg
+                        className="w-5 h-5 text-[#059669] mt-0.5 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clipRule="evenodd"
+                        />
                     </svg>
                     <div className="flex-1">
                         <p className="text-[#059669] font-semibold mb-1">
@@ -122,19 +113,31 @@ export default function FeedbackPage() {
                         {isAdmin ? "All Feedback" : "Approved Feedback"}
                     </h2>
                     <span className="text-sm text-[#6b7280]">
-                        {visibleFeedback.length} feedback{visibleFeedback.length !== 1 ? 's' : ''}
+                        {visibleFeedback.length} feedback
+                        {visibleFeedback.length !== 1 ? "s" : ""}
                     </span>
                 </div>
 
-                {visibleFeedback.length > 0 ? (
+                {loading ? (
+                    <div className="text-center py-12 text-gray-500">
+                        Loading feedback...
+                    </div>
+                ) : visibleFeedback.length > 0 ? (
                     <div className="space-y-4">
                         {visibleFeedback.map((feedback) => (
-                            <Card key={feedback.id} className="hover:shadow-lg transition-shadow">
+                            <Card
+                                key={feedback.id}
+                                className="hover:shadow-lg transition-shadow"
+                            >
                                 <CardBody className="p-6">
                                     <div className="flex items-start gap-4">
                                         {/* Quote Icon */}
                                         <div className="flex-shrink-0">
-                                            <svg className="w-8 h-8 text-[#d1d5db]" fill="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                className="w-8 h-8 text-[#d1d5db]"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                                             </svg>
                                         </div>
@@ -144,16 +147,18 @@ export default function FeedbackPage() {
                                             {/* Header with Batch and Date */}
                                             <div className="flex items-center gap-3 mb-3 flex-wrap">
                                                 <span className="px-3 py-1 bg-[#059669] text-white text-sm font-semibold rounded-full">
-                                                    {feedback.batchName}
+                                                    {feedback.batch}
                                                 </span>
                                                 <span className="text-sm text-[#6b7280]">
-                                                    📅 {feedback.submittedDate}
+                                                    📅 {feedback.createdAt ? formatDateShort(feedback.createdAt.toDate().toISOString()) : "N/A"}
                                                 </span>
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${feedback.status === "Approved"
+                                                <span
+                                                    className={`px-3 py-1 text-xs font-semibold rounded-full ${feedback.status === "APPROVED"
                                                         ? "bg-[#d1fae5] text-[#059669]"
                                                         : "bg-[#fed7aa] text-[#c2410c]"
-                                                    }`}>
-                                                    {feedback.status}
+                                                        }`}
+                                                >
+                                                    {feedback.status === "APPROVED" ? "Approved" : "Pending"}
                                                 </span>
                                             </div>
 
@@ -165,16 +170,20 @@ export default function FeedbackPage() {
                                             {/* Admin Controls */}
                                             {isAdmin && (
                                                 <div className="flex items-center gap-3">
-                                                    {feedback.status === "Pending" && (
+                                                    {feedback.status === "PENDING" && (
                                                         <button
-                                                            onClick={() => handleApprove(feedback.id)}
+                                                            onClick={() =>
+                                                                handleApprove(feedback.id)
+                                                            }
                                                             className="px-4 py-2 bg-[#059669] text-white text-sm font-semibold rounded-lg hover:bg-[#10b981] transition-colors"
                                                         >
                                                             ✓ Approve
                                                         </button>
                                                     )}
                                                     <button
-                                                        onClick={() => handleDelete(feedback.id)}
+                                                        onClick={() =>
+                                                            handleDelete(feedback.id)
+                                                        }
                                                         className="px-4 py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-100 transition-colors"
                                                     >
                                                         🗑️ Delete
@@ -189,8 +198,18 @@ export default function FeedbackPage() {
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <svg className="w-16 h-16 mx-auto text-[#d1d5db] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        <svg
+                            className="w-16 h-16 mx-auto text-[#d1d5db] mb-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                            />
                         </svg>
                         <p className="text-[#6b7280] text-lg">
                             No feedback available yet

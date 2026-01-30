@@ -3,31 +3,51 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-    { href: "/dashboard/teachers", label: "Teacher Directory", icon: "👥" },
-    { href: "/dashboard/schedule", label: "Class Schedule", icon: "📅" },
-    { href: "/dashboard/resources", label: "Resource Library", icon: "📚" },
-    { href: "/dashboard/policies", label: "Policy & Minutes", icon: "📋" },
-    { href: "/dashboard/feedback", label: "Feedback", icon: "💬" },
-    { href: "/dashboard/admin", label: "Admin Panel", icon: "⚙️" },
+    { href: "/dashboard", label: "Dashboard", icon: "🏠", adminOnly: false },
+    { href: "/dashboard/teachers", label: "Teacher Directory", icon: "👥", adminOnly: false },
+    { href: "/dashboard/schedule", label: "Class Schedule", icon: "📅", adminOnly: false },
+    { href: "/dashboard/resources", label: "Resource Library", icon: "📚", adminOnly: false },
+    { href: "/dashboard/policies", label: "Policy & Minutes", icon: "📋", adminOnly: false },
+    { href: "/dashboard/feedback", label: "Feedback", icon: "💬", adminOnly: false },
+    { href: "/dashboard/admin", label: "Admin Panel", icon: "⚙️", adminOnly: true },
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { userProfile, logout, loading } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Handle logout: clear session and redirect to login
-    const handleLogout = () => {
-        // Clear any auth tokens/session data
-        // localStorage.removeItem('authToken'); // Uncomment when auth is implemented
-        // sessionStorage.clear(); // Uncomment when auth is implemented
+    // Debug: Log user role
+    useEffect(() => {
+        if (!loading && userProfile) {
+            console.log("🔍 User Role:", userProfile.role);
+            console.log("🔍 Is Admin:", userProfile.role === "admin");
+        }
+    }, [loading, userProfile]);
 
-        // Redirect to login page
-        router.push('/login');
+    // Filter nav items based on user role
+    // Show all items while loading, then filter based on role
+    const filteredNavItems = navItems.filter(item => {
+        if (item.adminOnly) {
+            // Only show admin items if user is loaded and is admin
+            return !loading && userProfile?.role === "admin";
+        }
+        return true;
+    });
+
+    // Handle logout: clear Firebase session and redirect to login
+    const handleLogout = async () => {
+        try {
+            await logout();
+            router.push('/login');
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
     };
 
     return (
@@ -98,7 +118,7 @@ export default function Sidebar() {
                 {/* Navigation */}
                 <nav className="flex-1 p-4 overflow-y-auto">
                     <ul className="space-y-2">
-                        {navItems.map((item) => {
+                        {filteredNavItems.map((item) => {
                             const isActive = pathname === item.href;
                             return (
                                 <li key={item.href}>
