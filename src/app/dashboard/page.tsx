@@ -12,6 +12,8 @@ import {
     getCompletedClassesThisMonth,
     getPendingClassesThisMonth,
     addNotice,
+    updateNotice,
+    deleteNotice,
     Class,
     Notice
 } from "@/services/dashboardService";
@@ -25,12 +27,19 @@ export default function DashboardPage() {
     const [notices, setNotices] = useState<Notice[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Add Notice State
+    // Add/Edit Notice State
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
     const [newNoticeTitle, setNewNoticeTitle] = useState("");
     const [newNoticeDescription, setNewNoticeDescription] = useState("");
-    const [newNoticePriority, setNewNoticePriority] = useState<"high" | "medium" | "low">("medium");
+    const [newNoticePriority, setNewNoticePriority] = useState<"normal" | "urgent">("normal");
     const [isAddingNotice, setIsAddingNotice] = useState(false);
+
+    // Delete Notice State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [noticeToDelete, setNoticeToDelete] = useState<Notice | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch data from Firestore
     useEffect(() => {
@@ -89,32 +98,87 @@ export default function DashboardPage() {
 
         setIsAddingNotice(true);
         try {
-            const newNotice: Omit<Notice, "id"> = {
-                title: newNoticeTitle,
-                description: newNoticeDescription,
-                priority: newNoticePriority,
-                date: new Date().toISOString().split('T')[0],
-                createdBy: userProfile?.uid,
-                createdByName: userProfile?.displayName || "Unknown",
-                createdAt: serverTimestamp()
-            };
-
-            await addNotice(newNotice);
+            if (isEditMode && editingNoticeId) {
+                // Update existing notice
+                await updateNotice(editingNoticeId, {
+                    title: newNoticeTitle,
+                    description: newNoticeDescription,
+                    priority: newNoticePriority,
+                });
+            } else {
+                // Add new notice
+                const newNotice: Omit<Notice, "id"> = {
+                    title: newNoticeTitle,
+                    description: newNoticeDescription,
+                    priority: newNoticePriority,
+                    date: new Date().toISOString().split('T')[0],
+                    createdBy: userProfile?.uid,
+                    createdByName: userProfile?.displayName || "Unknown",
+                    createdAt: serverTimestamp()
+                };
+                await addNotice(newNotice);
+            }
 
             // Refresh notices
             const updatedNotices = await getAllNotices();
             setNotices(updatedNotices);
 
             // Close modal and reset form
-            setIsNoticeModalOpen(false);
-            setNewNoticeTitle("");
-            setNewNoticeDescription("");
-            setNewNoticePriority("medium");
+            resetNoticeForm();
         } catch (error) {
-            console.error("Error adding notice:", error);
-            alert("Failed to add notice. Please try again.");
+            console.error("Error saving notice:", error);
+            alert("Failed to save notice. Please try again.");
         } finally {
             setIsAddingNotice(false);
+        }
+    };
+
+    // Reset form and close modal
+    const resetNoticeForm = () => {
+        setIsNoticeModalOpen(false);
+        setIsEditMode(false);
+        setEditingNoticeId(null);
+        setNewNoticeTitle("");
+        setNewNoticeDescription("");
+        setNewNoticePriority("normal");
+    };
+
+    // Open edit modal
+    const handleEditNotice = (notice: Notice) => {
+        setIsEditMode(true);
+        setEditingNoticeId(notice.id);
+        setNewNoticeTitle(notice.title);
+        setNewNoticeDescription(notice.description);
+        setNewNoticePriority(notice.priority || "normal");
+        setIsNoticeModalOpen(true);
+    };
+
+    // Open delete confirmation modal
+    const handleDeleteClick = (notice: Notice) => {
+        setNoticeToDelete(notice);
+        setIsDeleteModalOpen(true);
+    };
+
+    // Confirm delete
+    const handleDeleteNotice = async () => {
+        if (!noticeToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            await deleteNotice(noticeToDelete.id);
+
+            // Refresh notices
+            const updatedNotices = await getAllNotices();
+            setNotices(updatedNotices);
+
+            // Close modal
+            setIsDeleteModalOpen(false);
+            setNoticeToDelete(null);
+        } catch (error) {
+            console.error("Error deleting notice:", error);
+            alert("Failed to delete notice. Please try again.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -273,20 +337,27 @@ export default function DashboardPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {notices.map((notice) => (
-                            <NoticeCard key={notice.id} notice={notice} />
+                            <NoticeCard
+                                key={notice.id}
+                                notice={notice}
+                                onEdit={handleEditNotice}
+                                onDelete={handleDeleteClick}
+                            />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Add Notice Modal */}
+            {/* Add/Edit Notice Modal */}
             {isNoticeModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="text-xl font-bold text-gray-900">Add New Notice</h3>
+                            <h3 className="text-xl font-bold text-gray-900">
+                                {isEditMode ? "Edit Notice" : "Add New Notice"}
+                            </h3>
                             <button
-                                onClick={() => setIsNoticeModalOpen(false)}
+                                onClick={resetNoticeForm}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 ✕
@@ -321,7 +392,7 @@ export default function DashboardPage() {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                                 <div className="flex gap-4">
-                                    {(['low', 'medium', 'high'] as const).map((priority) => (
+                                    {(['normal', 'urgent'] as const).map((priority) => (
                                         <label key={priority} className="flex items-center cursor-pointer group">
                                             <input
                                                 type="radio"
@@ -334,9 +405,9 @@ export default function DashboardPage() {
                                             <div className={`
                                                 px-4 py-2 rounded-lg text-sm font-medium capitalize border transition-all
                                                 ${newNoticePriority === priority
-                                                    ? priority === 'high' ? 'bg-red-50 border-red-200 text-red-700'
-                                                        : priority === 'medium' ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                                                            : 'bg-green-50 border-green-200 text-green-700'
+                                                    ? priority === 'urgent'
+                                                        ? 'bg-red-50 border-red-200 text-red-700'
+                                                        : 'bg-gray-50 border-gray-200 text-gray-700'
                                                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}
                                             `}>
                                                 {priority}
@@ -351,7 +422,7 @@ export default function DashboardPage() {
                                     type="button"
                                     variant="outline"
                                     className="w-full"
-                                    onClick={() => setIsNoticeModalOpen(false)}
+                                    onClick={resetNoticeForm}
                                 >
                                     Cancel
                                 </Button>
@@ -360,10 +431,44 @@ export default function DashboardPage() {
                                     disabled={isAddingNotice}
                                     className="w-full bg-[#059669] hover:bg-[#047857] text-white"
                                 >
-                                    {isAddingNotice ? "Adding..." : "Post Notice"}
+                                    {isAddingNotice ? "Saving..." : (isEditMode ? "Update Notice" : "Post Notice")}
                                 </Button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && noticeToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Notice</h3>
+                            <p className="text-gray-500 mb-6">
+                                Are you sure you want to delete <strong>"{noticeToDelete.title}"</strong>? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setIsDeleteModalOpen(false); setNoticeToDelete(null); }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteNotice}
+                                    disabled={isDeleting}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                >
+                                    {isDeleting ? "Deleting..." : "Delete"}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

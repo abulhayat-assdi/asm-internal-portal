@@ -1,4 +1,4 @@
-import { collection, getDocs, addDoc, query, where, Timestamp, orderBy } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where, Timestamp, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 // Types
@@ -17,7 +17,7 @@ export interface Notice {
     title: string;
     description: string;
     date: string;
-    priority: "high" | "medium" | "low";
+    priority: "normal" | "urgent";
     createdBy?: string;
     createdByName?: string;
     createdAt?: any;
@@ -33,6 +33,38 @@ export const addNotice = async (notice: Omit<Notice, "id">): Promise<string> => 
         return docRef.id;
     } catch (error) {
         console.error("Error adding notice:", error);
+        throw error;
+    }
+};
+
+/**
+ * Update an existing notice in Firestore
+ */
+export const updateNotice = async (
+    id: string,
+    data: Partial<Omit<Notice, 'id'>>
+): Promise<void> => {
+    try {
+        const noticeRef = doc(db, "notices", id);
+        await updateDoc(noticeRef, {
+            ...data,
+            updatedAt: Timestamp.now()
+        });
+    } catch (error) {
+        console.error("Error updating notice:", error);
+        throw error;
+    }
+};
+
+/**
+ * Delete a notice from Firestore
+ */
+export const deleteNotice = async (id: string): Promise<void> => {
+    try {
+        const noticeRef = doc(db, "notices", id);
+        await deleteDoc(noticeRef);
+    } catch (error) {
+        console.error("Error deleting notice:", error);
         throw error;
     }
 };
