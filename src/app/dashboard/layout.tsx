@@ -8,24 +8,24 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <ProtectedRoute>
-            <div className="min-h-screen bg-[#f8f9fa]">
-                {/* Sidebar */}
-                <Sidebar />
+        <div className="min-h-screen bg-[#f8f9fa]">
+            {/* Sidebar */}
+            <Sidebar />
 
-                {/* Main Content Area */}
-                <div className="lg:ml-64">
-                    {/* Navbar */}
-                    <Navbar />
+            {/* Main Content Area */}
+            <div className="lg:ml-64">
+                {/* Navbar */}
+                <Navbar />
 
-                    {/* Page Content */}
-                    <main className="pt-16 min-h-screen">
-                        <div className="p-4 md:p-6">
+                {/* Page Content */}
+                <main className="pt-16 min-h-screen">
+                    <div className="p-4 md:p-6">
+                        <ProtectedRoute>
                             {children}
-                        </div>
-                    </main>
-                </div>
+                        </ProtectedRoute>
+                    </div>
+                </main>
             </div>
-        </ProtectedRoute>
+        </div>
     );
 }

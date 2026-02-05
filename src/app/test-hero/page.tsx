@@ -8,10 +8,10 @@ import Footer from "@/components/ui/Footer";
 export default function TestHeroPage() {
     const navLinks = [
         { label: "Home", href: "#", isActive: true },
-        { label: "About the Course", href: "#about" },
-        { label: "Course Modules", href: "#modules" },
+        { label: "About", href: "#about" },
+        { label: "Module", href: "#modules" },
         { label: "Instructors", href: "#instructors" },
-        { label: "Student Feedback", href: "#feedback" },
+        { label: "Success Stories", href: "#feedback" },
         { label: "Contact", href: "#contact" },
         { label: "Blog", href: "#blog" },
     ];
@@ -75,15 +75,15 @@ export default function TestHeroPage() {
             title: "Navigation",
             links: [
                 { label: "Home", href: "#" },
-                { label: "About the Course", href: "#about" },
-                { label: "Course Modules", href: "#modules" },
+                { label: "About", href: "#about" },
+                { label: "Module", href: "#modules" },
                 { label: "Instructors", href: "#instructors" },
             ],
         },
         {
             title: "Support",
             links: [
-                { label: "Student Feedback", href: "#feedback" },
+                { label: "Success Stories", href: "#feedback" },
                 { label: "Contact", href: "#contact" },
                 { label: "Enroll / Learn More", href: "#enroll" },
             ],

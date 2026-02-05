@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface NavLink {
@@ -14,6 +16,8 @@ interface HeaderProps {
     navLinks: NavLink[];
     ctaText: string;
     onCtaClick?: () => void;
+    secondaryCtaText?: string;
+    onSecondaryCtaClick?: () => void;
     onBrandClick?: () => void;
     className?: string;
 }
@@ -23,29 +27,66 @@ export default function Header({
     navLinks,
     ctaText,
     onCtaClick,
+    secondaryCtaText = "Login as Teacher",
+    onSecondaryCtaClick,
     onBrandClick,
     className = "",
-}: HeaderProps) {
+    transparent = false,
+}: HeaderProps & { transparent?: boolean }) {
+    const router = useRouter();
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const isTransparent = transparent && !isScrolled;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const handleSecondaryClick = onSecondaryCtaClick || (() => router.push('/login'));
+
+    // Default handler for Enroll button if onCtaClick is not provided
+    const handleCtaClick = onCtaClick || (() => {
+        if (ctaText === "Enroll") {
+            router.push('/enroll');
+        }
+    });
+
 
     return (
         <header
             className={cn(
-                "w-full bg-white border-b border-[#e5e7eb] sticky top-0 z-50",
+                "w-full transition-all duration-300 z-50",
+                transparent
+                    ? "fixed top-0"
+                    : "sticky top-0 bg-white border-b border-[#e5e7eb]",
+                isTransparent
+                    ? "bg-transparent border-transparent py-4"
+                    : transparent
+                        ? "bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm py-2" // Glass state when scrolled
+                        : "", // Default state handled above
                 className
             )}
         >
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
+                <div className="flex items-center justify-between h-20">
                     {/* Left - Brand */}
-                    <button
-                        onClick={onBrandClick}
+                    <Link
+                        href="/"
                         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                     >
                         {/* Logo Icon */}
-                        <div className="w-9 h-9 rounded-lg bg-[#059669] flex items-center justify-center">
+                        <div className={cn(
+                            "w-9 h-9 rounded-lg flex items-center justify-center transition-colors",
+                            isTransparent ? "bg-white" : "bg-[#4CAF50]"
+                        )}>
                             <svg
-                                className="w-5 h-5 text-white"
+                                className={cn("w-5 h-5", isTransparent ? "text-[#4CAF50]" : "text-white")}
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -57,44 +98,75 @@ export default function Header({
                                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                             </svg>
                         </div>
-                        <span className="text-lg font-semibold text-[#1f2937]">
+                        <span className={cn(
+                            "text-lg font-semibold transition-colors",
+                            isTransparent ? "text-white" : "text-[#1f2937]"
+                        )}>
                             {brandText}
                         </span>
-                    </button>
+                    </Link>
 
                     {/* Desktop Navigation - Centered */}
-                    <nav className="hidden lg:flex items-center justify-center flex-1 gap-1.5 mx-8">
+                    <nav className="hidden lg:flex items-center justify-center flex-1 gap-6 mx-8">
                         {navLinks.map((link, index) => (
-                            <a
+                            <Link
                                 key={index}
                                 href={link.href}
                                 className={cn(
-                                    "px-3.5 py-1.5 text-sm font-medium rounded-full border transition-all duration-200 ease-out",
+                                    "text-sm font-medium transition-colors duration-200 ease-out",
                                     link.isActive
-                                        ? "text-[#059669] bg-[#f0fdf4] border-[#dcfce7]"
-                                        : "text-[#4b5563] bg-white border-[#e5e7eb] hover:text-[#059669] hover:bg-[#f0fdf4] hover:border-[#dcfce7]"
+                                        ? isTransparent
+                                            ? "text-[#4CAF50]"
+                                            : "text-[#4CAF50]"
+                                        : isTransparent
+                                            ? "text-white/90 hover:text-white"
+                                            : "text-[#4b5563] hover:text-[#4CAF50]"
                                 )}
                             >
                                 {link.label}
-                            </a>
+                            </Link>
                         ))}
                     </nav>
 
                     {/* Desktop CTA */}
-                    <button
-                        onClick={onCtaClick}
-                        className="hidden lg:block px-4 py-2 bg-[#059669] text-white text-sm font-semibold rounded-full
-                            transition-all duration-200 ease-out
-                            hover:bg-[#10b981] hover:shadow-md
-                            focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2"
-                    >
-                        {ctaText}
-                    </button>
+                    <div className="hidden lg:flex items-center gap-3">
+                        {/* Secondary CTA - made text-only or subtle for header to reduce noise, or keep as button if needed. 
+                            Keeping as button but checking style. */}
+                        {secondaryCtaText && (
+                            <button
+                                onClick={handleSecondaryClick}
+                                className={cn(
+                                    "px-5 py-2 text-sm font-bold rounded-full transition-all duration-200 ease-out whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-offset-2",
+                                    isTransparent
+                                        ? "bg-transparent text-white border border-white/40 hover:bg-white/10 hover:border-white focus:ring-white"
+                                        : "bg-transparent text-[#4CAF50] border border-[#4CAF50] hover:bg-[#F1F8E9] focus:ring-[#4CAF50]"
+                                )}
+                            >
+                                {secondaryCtaText}
+                            </button>
+                        )}
+                        <button
+                            onClick={handleCtaClick}
+                            className={cn(
+                                "px-5 py-2 text-sm font-bold rounded-full transition-all duration-200 ease-out whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-offset-2",
+                                isTransparent
+                                    ? "bg-[#4CAF50] text-white hover:bg-[#43A047] focus:ring-[#4CAF50]" // Green even on transparent
+                                    : "bg-[#4CAF50] text-white hover:bg-[#43A047] focus:ring-[#4CAF50]"
+                            )}
+                        >
+                            {ctaText}
+                        </button>
+                    </div>
 
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="lg:hidden p-2 text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6] rounded-lg transition-colors"
+                        className={cn(
+                            "lg:hidden p-2 rounded-lg transition-colors",
+                            isTransparent
+                                ? "text-white hover:bg-white/10"
+                                : "text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6]"
+                        )}
                         aria-label="Toggle menu"
                     >
                         {isMobileMenuOpen ? (
@@ -111,36 +183,52 @@ export default function Header({
 
                 {/* Mobile Menu */}
                 {isMobileMenuOpen && (
-                    <div className="lg:hidden py-4 border-t border-[#e5e7eb]">
+                    <div className="lg:hidden py-4 border-t border-[#e5e7eb] absolute top-full left-0 w-full bg-white shadow-xl px-4 rounded-b-2xl">
                         <nav className="flex flex-col gap-2 mb-4">
                             {navLinks.map((link, index) => (
-                                <a
+                                <Link
                                     key={index}
                                     href={link.href}
                                     className={cn(
                                         "px-5 py-3 text-base font-semibold rounded-full border transition-all duration-200 ease-out",
                                         link.isActive
                                             ? "text-[#059669] bg-[#f0fdf4] border-[#dcfce7]"
-                                            : "text-[#059669] bg-white border-[#e5e7eb] hover:bg-[#f0fdf4] hover:border-[#dcfce7]"
+                                            : "text-[#1f2937] bg-white border-[#e5e7eb] hover:bg-[#f0fdf4] hover:border-[#dcfce7]"
                                     )}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     {link.label}
-                                </a>
+                                </Link>
                             ))}
                         </nav>
-                        <button
-                            onClick={() => {
-                                onCtaClick?.();
-                                setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full px-6 py-3.5 bg-[#059669] text-white text-base font-bold rounded-full
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => {
+                                    handleCtaClick();
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full px-6 py-3.5 bg-[#059669] text-white text-base font-bold rounded-full
                                 transition-all duration-200 ease-out
                                 hover:bg-[#10b981]
                                 focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2"
-                        >
-                            {ctaText}
-                        </button>
+                            >
+                                {ctaText}
+                            </button>
+                            {secondaryCtaText && (
+                                <button
+                                    onClick={() => {
+                                        handleSecondaryClick();
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="w-full px-6 py-3.5 bg-white text-[#059669] border border-[#059669] text-base font-bold rounded-full
+                                    transition-all duration-200 ease-out
+                                    hover:bg-[#f0fdf4]
+                                    focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2"
+                                >
+                                    {secondaryCtaText}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

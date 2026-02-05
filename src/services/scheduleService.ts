@@ -64,20 +64,36 @@ export const getClassesByTeacherId = async (teacherId: string): Promise<ClassSch
         }
 
         // 2. Fetch Base Schedule from Sheets API
-        const response = await fetch('/api/schedule', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ teacherId }),
-        });
+        // 2. Mock Data Replacement for API (Free Plan Limitation)
+        // const response = await fetch('/api/schedule', ...);
 
-        if (!response.ok) {
-            console.error('API Error:', await response.text());
-            throw new Error(`Error: ${response.statusText}`);
-        }
+        // Mock Response Data
+        const result = {
+            data: [
+                {
+                    teacherId: teacherId,
+                    teacherName: "Mock Teacher",
+                    date: "2026-01-30",
+                    day: "Friday",
+                    time: "10:00-12:00",
+                    batch: "Batch_06",
+                    subject: "Test Class (Mock)",
+                    status: "Scheduled" as const
+                },
+                {
+                    teacherId: teacherId,
+                    teacherName: "Mock Teacher",
+                    date: "2026-02-05",
+                    day: "Wednesday",
+                    time: "14:00-16:00",
+                    batch: "Batch_07",
+                    subject: "Mock Subject",
+                    status: "Scheduled" as const
+                }
+            ]
+        };
 
-        const result = await response.json();
+        // const result = await response.json();
         let classes: ClassSchedule[] = Array.isArray(result.data) ? result.data : [];
 
         // 3. Merge & Process Logic based on Date

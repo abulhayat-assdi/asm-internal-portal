@@ -17,11 +17,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     // Show loading spinner while checking auth
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#059669]"></div>
-                    <p className="mt-4 text-[#6b7280]">Loading...</p>
-                </div>
+            <div className="min-h-[50vh] flex items-center justify-center">
+                {/* Minimal loader or skeleton can go here. For now, just a small spinner is better than full screen. */}
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#059669]"></div>
             </div>
         );
     }

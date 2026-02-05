@@ -3,12 +3,12 @@ import Footer from "@/components/ui/Footer";
 
 export default function ModulesPage() {
     const navLinks = [
-        { label: "Home", href: "/home" },
-        { label: "About the Course", href: "/about" },
-        { label: "Course Modules", href: "/modules", isActive: true },
+        { label: "Home", href: "/" },
+        { label: "About", href: "/about" },
+        { label: "Module", href: "/modules", isActive: true },
         { label: "Instructors", href: "/instructors" },
-        { label: "Student Feedback", href: "/feedback" },
-        { label: "Contact", href: "/contact" },
+        { label: "Success Stories", href: "/feedback" },
+        { label: "Contact & Q&A", href: "/contact" },
         { label: "Blog", href: "/blog" },
     ];
 
@@ -16,17 +16,17 @@ export default function ModulesPage() {
         {
             title: "Navigation",
             links: [
-                { label: "Home", href: "/home" },
-                { label: "About the Course", href: "/about" },
-                { label: "Course Modules", href: "/modules" },
+                { label: "Home", href: "/" },
+                { label: "About", href: "/about" },
+                { label: "Module", href: "/modules" },
                 { label: "Instructors", href: "/instructors" },
             ],
         },
         {
             title: "Support",
             links: [
-                { label: "Student Feedback", href: "/feedback" },
-                { label: "Contact", href: "/contact" },
+                { label: "Success Stories", href: "/feedback" },
+                { label: "Contact & Q&A", href: "/contact" },
                 { label: "Enroll / Learn More", href: "/enroll" },
             ],
         },
@@ -76,71 +76,47 @@ export default function ModulesPage() {
             />
 
             <main className="min-h-screen bg-white">
-                {/* 1. Page Header Section */}
-                <section className="w-full bg-white py-16 md:py-20">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#1f2937] mb-4">
-                            Course Modules
-                        </h1>
-                        <p className="text-lg md:text-xl text-[#6b7280] max-w-2xl mx-auto">
-                            An overview of the core learning modules that shape the structure and depth of the training program.
-                        </p>
-                    </div>
-                </section>
 
-                {/* 2. Course Structure Overview */}
-                <section className="w-full bg-[#f9fafb] py-16 md:py-20">
-                    <div className="max-w-3xl mx-auto px-6 lg:px-8">
-                        <h2 className="text-2xl md:text-3xl font-bold text-[#1f2937] mb-6">
-                            Program Structure
-                        </h2>
-                        <div className="space-y-6 text-[#4b5563] leading-relaxed">
-                            <p>
-                                This course is designed as a structured professional training program that combines real-world sales practice, communication skills, modern marketing tools, and ethical responsibility.
-                            </p>
-                            <p>
-                                The modules are delivered through field execution, guided practice, and applied learning—ensuring that students do not only understand concepts, but can apply them confidently in real professional and business environments.
-                            </p>
-                        </div>
-                        <div className="mt-8 flex flex-wrap gap-4">
-                            <div className="bg-white rounded-xl px-5 py-3 border border-[#e5e7eb] shadow-sm">
-                                <span className="text-sm text-[#6b7280]">Duration</span>
-                                <p className="text-lg font-semibold text-[#059669]">90 Days</p>
-                            </div>
-                            <div className="bg-white rounded-xl px-5 py-3 border border-[#e5e7eb] shadow-sm">
-                                <span className="text-sm text-[#6b7280]">Focus</span>
-                                <p className="text-lg font-semibold text-[#059669]">Practical Skills</p>
-                            </div>
-                            <div className="bg-white rounded-xl px-5 py-3 border border-[#e5e7eb] shadow-sm">
-                                <span className="text-sm text-[#6b7280]">Approach</span>
-                                <p className="text-lg font-semibold text-[#059669]">Learn by Doing</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 {/* 3. Core Modules Section */}
                 <section className="w-full bg-white py-16 md:py-20">
                     <div className="max-w-7xl mx-auto px-6 lg:px-8">
-                        <div className="text-center max-w-2xl mx-auto mb-12">
+                        <div className="text-center max-w-2xl mx-auto mb-16">
                             <h2 className="text-2xl md:text-3xl font-bold text-[#1f2937] mb-4">
                                 Core Learning Modules
                             </h2>
                             <p className="text-[#6b7280] leading-relaxed">
-                                Each module covers essential skills and knowledge areas that prepare you for real-world success.
+                                A step-by-step journey designed to build your skills from the ground up.
                             </p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {coreModules.map((module, index) => (
                                 <div
                                     key={index}
-                                    className="bg-white rounded-2xl p-6 border border-[#e5e7eb] shadow-sm hover:shadow-md transition-shadow duration-200"
+                                    className={`
+                                        group relative bg-white rounded-2xl p-8 border hover:shadow-lg transition-all duration-300
+                                        ${index === 0 ? 'border-[#059669]/30 shadow-md ring-1 ring-[#059669]/10' : 'border-[#e5e7eb] shadow-sm'}
+                                    `}
                                 >
-                                    <div className="w-full h-1 bg-[#059669] rounded-full mb-4"></div>
-                                    <h3 className="text-lg font-semibold text-[#1f2937] mb-2">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <span className={`
+                                            text-sm font-bold tracking-widest uppercase
+                                            ${index === 0 ? 'text-[#059669]' : 'text-[#9ca3af]'}
+                                        `}>
+                                            Module {String(index + 1).padStart(2, '0')}
+                                        </span>
+                                        {index === 0 && (
+                                            <span className="bg-[#ecfdf5] text-[#059669] text-xs font-semibold px-2.5 py-1 rounded-full">
+                                                Foundation
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <h3 className="text-xl font-bold text-[#1f2937] mb-3 group-hover:text-[#059669] transition-colors duration-200">
                                         {module.title}
                                     </h3>
-                                    <p className="text-sm text-[#6b7280] leading-relaxed">
+
+                                    <p className="text-[#6b7280] leading-relaxed text-sm">
                                         {module.description}
                                     </p>
                                 </div>
@@ -149,35 +125,20 @@ export default function ModulesPage() {
                     </div>
                 </section>
 
-                {/* 4. Learning Approach Note */}
-                <section className="w-full bg-[#f9fafb] py-16 md:py-20">
-                    <div className="max-w-3xl mx-auto px-6 lg:px-8">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-1 bg-[#059669] rounded-full"></div>
-                            <h2 className="text-2xl md:text-3xl font-bold text-[#1f2937]">
+                {/* 4. Learning Approach & CTA (Merged) */}
+                <section className="w-full bg-[#f9fafb] py-8 md:py-12 border-t border-[#f3f4f6]">
+                    <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="w-16 h-1 bg-[#059669] rounded-full mb-6"></div>
+                            <h2 className="text-3xl md:text-4xl font-bold text-[#1f2937] mb-6">
                                 How We Teach
                             </h2>
-                        </div>
-                        <div className="text-[#4b5563] leading-relaxed">
-                            <p>
+                            <p className="text-[#4b5563] text-lg leading-relaxed max-w-2xl mx-auto">
                                 All modules are taught through practical execution rather than theory alone. Students learn by doing—interacting with real customers, solving real problems, and applying skills in real contexts under guidance and supervision.
                             </p>
                         </div>
-                    </div>
-                </section>
 
-                {/* 5. Call To Action Section */}
-                <section className="w-full bg-[#f0fdf4] py-16 md:py-20">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-                        <p className="text-lg md:text-xl text-[#1f2937] mb-6 max-w-2xl mx-auto">
-                            Explore how these modules come together to build real skills, confidence, and ethical professionalism.
-                        </p>
-                        <button className="px-6 py-3 bg-[#059669] text-white font-semibold rounded-full
-                            transition-all duration-200 ease-out
-                            hover:bg-[#10b981] hover:shadow-lg
-                            focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2">
-                            View Enrollment Details
-                        </button>
+
                     </div>
                 </section>
             </main>

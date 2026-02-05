@@ -95,7 +95,7 @@ export default function FeedbackPage() {
                             <input
                                 type="text"
                                 readOnly
-                                value="https://portal.google.com/feedback"
+                                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/feedback`}
                                 className="flex-1 px-3 py-2 bg-white border border-[#059669] rounded text-sm text-[#1f2937]"
                             />
                             <button className="px-4 py-2 bg-[#059669] text-white text-sm font-medium rounded hover:bg-[#10b981] transition-colors">

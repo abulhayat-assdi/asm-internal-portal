@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface FooterLinkGroup {
     title: string;
@@ -25,7 +26,7 @@ export default function Footer({
     return (
         <footer
             className={cn(
-                "w-full bg-[#f9fafb] border-t border-[#e5e7eb]",
+                "w-full bg-[#0B1120] border-t border-gray-800", // Dark premium background
                 className
             )}
         >
@@ -37,7 +38,7 @@ export default function Footer({
                         <div className="lg:col-span-5">
                             <div className="flex items-center gap-2 mb-4">
                                 {/* Logo Icon */}
-                                <div className="w-9 h-9 rounded-lg bg-[#059669] flex items-center justify-center">
+                                <div className="w-9 h-9 rounded-lg bg-[#4CAF50] flex items-center justify-center">
                                     <svg
                                         className="w-5 h-5 text-white"
                                         viewBox="0 0 24 24"
@@ -51,11 +52,11 @@ export default function Footer({
                                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                                     </svg>
                                 </div>
-                                <span className="text-lg font-semibold text-[#1f2937]">
+                                <span className="text-lg font-semibold text-white">
                                     {brandName}
                                 </span>
                             </div>
-                            <p className="text-sm text-[#6b7280] leading-relaxed max-w-sm">
+                            <p className="text-sm text-gray-400 leading-relaxed max-w-sm">
                                 {brandDescription}
                             </p>
                         </div>
@@ -65,18 +66,18 @@ export default function Footer({
                             <div className="grid grid-cols-2 gap-8">
                                 {linkGroups.map((group, index) => (
                                     <div key={index}>
-                                        <h4 className="text-sm font-semibold text-[#1f2937] mb-4">
+                                        <h4 className="text-sm font-semibold text-gray-200 mb-4">
                                             {group.title}
                                         </h4>
                                         <ul className="space-y-3">
                                             {group.links.map((link, linkIndex) => (
                                                 <li key={linkIndex}>
-                                                    <a
+                                                    <Link
                                                         href={link.href}
-                                                        className="text-sm text-[#6b7280] hover:text-[#059669] transition-colors"
+                                                        className="text-sm text-gray-400 hover:text-[#4CAF50] transition-colors"
                                                     >
                                                         {link.label}
-                                                    </a>
+                                                    </Link>
                                                 </li>
                                             ))}
                                         </ul>
@@ -88,8 +89,8 @@ export default function Footer({
                 </div>
 
                 {/* Bottom Section */}
-                <div className="py-6 border-t border-[#e5e7eb]">
-                    <p className="text-sm text-[#9ca3af] text-center">
+                <div className="py-6 border-t border-gray-800">
+                    <p className="text-sm text-gray-500 text-center">
                         {copyrightText}
                     </p>
                 </div>

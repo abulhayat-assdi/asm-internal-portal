@@ -161,7 +161,8 @@ export const markClassComplete = async (classId: string, adminUid: string) => {
         await batch.commit();
 
         // 4. Call external API to update Google Sheets (Sync)
-        // Soft-fail: If this fails (e.g. Test data, Row not found), we still keep the Firestore update.
+        // DISABLED for Free Plan (Static Hosting) - No API Routes available
+        /*
         try {
             const payload = {
                 teacherId: classData.teacherUid,
@@ -181,12 +182,11 @@ export const markClassComplete = async (classId: string, adminUid: string) => {
             if (!response.ok) {
                 const errorData = await response.json();
                 console.warn("Sheet Sync Warning:", errorData.error || response.statusText);
-                // We do NOT throw here to avoid blocking the Admin UI "Success" state
-                // since the primary system (Firestore) is updated.
             }
         } catch (syncError) {
             console.warn("Sheet Sync Failed (Network/Other):", syncError);
         }
+        */
 
         return true;
     } catch (error) {

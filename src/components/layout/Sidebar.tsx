@@ -14,6 +14,7 @@ const navItems = [
     { href: "/dashboard/policies", label: "Policy & Minutes", icon: "📋", adminOnly: false },
     { href: "/dashboard/feedback", label: "Feedback", icon: "💬", adminOnly: false },
     { href: "/dashboard/admin", label: "Admin Panel", icon: "⚙️", adminOnly: true },
+    { href: "/dashboard/admin/blog", label: "Blog Management", icon: "📝", adminOnly: true },
 ];
 
 export default function Sidebar() {

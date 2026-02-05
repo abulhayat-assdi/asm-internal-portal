@@ -54,15 +54,25 @@ export default function SchedulePage() {
     }, []);
 
     // Fetch Batch Stats (Google Sheet Backend)
+    // Mock Batch Stats (Free Plan)
     useEffect(() => {
         const fetchBatchStats = async () => {
             setBatchStatsLoading(true);
             try {
-                const res = await fetch('/api/batch-stats');
-                const json = await res.json();
-                if (json.success && json.data) {
-                    setBatchStats(json.data);
-                }
+                // Mock Data for faster loading/Free tier
+                const mockData = {
+                    "Batch_06": [
+                        { subjectName: "Sales", classCount: 12 },
+                        { subjectName: "Branding", classCount: 8 }
+                    ],
+                    "Batch_07": [
+                        { subjectName: "Digital Marketing", classCount: 5 },
+                        { subjectName: "Canva", classCount: 15 }
+                    ]
+                };
+
+                // Simulate slight network delay for realism if needed, or just set it:
+                setBatchStats(mockData);
             } catch (error) {
                 console.error("Failed to fetch batch stats", error);
             } finally {

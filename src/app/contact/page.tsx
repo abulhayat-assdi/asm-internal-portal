@@ -1,24 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
+import AIFAQSection from "@/components/ui/AIFAQSection";
 
 export default function ContactPage() {
-    const [formData, setFormData] = useState({
-        fullName: "",
-        email: "",
-        subject: "",
-        message: "",
-    });
 
     const navLinks = [
-        { label: "Home", href: "/home" },
-        { label: "About the Course", href: "/about" },
-        { label: "Course Modules", href: "/modules" },
+        { label: "Home", href: "/" },
+        { label: "About", href: "/about" },
+        { label: "Module", href: "/modules" },
         { label: "Instructors", href: "/instructors" },
-        { label: "Student Feedback", href: "/feedback" },
-        { label: "Contact", href: "/contact", isActive: true },
+        { label: "Success Stories", href: "/feedback" },
+        { label: "Contact & Q&A", href: "/contact", isActive: true },
         { label: "Blog", href: "/blog" },
     ];
 
@@ -26,17 +20,17 @@ export default function ContactPage() {
         {
             title: "Navigation",
             links: [
-                { label: "Home", href: "/home" },
-                { label: "About the Course", href: "/about" },
-                { label: "Course Modules", href: "/modules" },
+                { label: "Home", href: "/" },
+                { label: "About", href: "/about" },
+                { label: "Module", href: "/modules" },
                 { label: "Instructors", href: "/instructors" },
             ],
         },
         {
             title: "Support",
             links: [
-                { label: "Student Feedback", href: "/feedback" },
-                { label: "Contact", href: "/contact" },
+                { label: "Success Stories", href: "/feedback" },
+                { label: "Contact & Q&A", href: "/contact" },
                 { label: "Enroll / Learn More", href: "/enroll" },
             ],
         },
@@ -51,7 +45,7 @@ export default function ContactPage() {
                 </svg>
             ),
             label: "Email",
-            value: "contact@salesandmarketingcourse.com",
+            value: "abul.hayat@skill.assunnahfoundation.org",
             description: "For inquiries and course information",
         },
         {
@@ -61,8 +55,8 @@ export default function ContactPage() {
                 </svg>
             ),
             label: "Phone",
-            value: "+880 1XXXXXXXXX",
-            description: "Available during office hours",
+            value: "01862534626",
+            description: "Available at 9 am to 5 pm",
         },
         {
             icon: (
@@ -72,23 +66,10 @@ export default function ContactPage() {
                 </svg>
             ),
             label: "Training Location",
-            value: "In-person residential training",
-            description: "Location shared after enrollment",
+            value: "আস-সুন্নাহ স্কিল ডেভেলপমেন্ট ইনস্টিটিউট",
+            description: "আলি নগর গেটের বিপরীত পাশের বিল্ডিং, সাতারকুল রোড, উত্তর বাড্ডা, ঢাকা।",
         },
     ];
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Form submission logic would go here
-        console.log("Form submitted:", formData);
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-    };
 
     return (
         <>
@@ -99,17 +80,7 @@ export default function ContactPage() {
             />
 
             <main className="min-h-screen bg-white">
-                {/* 1. Page Header Section */}
-                <section className="w-full bg-white py-16 md:py-20">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#1f2937] mb-4">
-                            Contact
-                        </h1>
-                        <p className="text-lg md:text-xl text-[#6b7280] max-w-2xl mx-auto">
-                            Get in touch with us for questions, inquiries, or further information about the course.
-                        </p>
-                    </div>
-                </section>
+
 
                 {/* 2. Contact Information Section */}
                 <section className="w-full bg-[#f9fafb] py-16 md:py-20">
@@ -137,7 +108,7 @@ export default function ContactPage() {
                                     <p className="text-lg font-semibold text-[#1f2937] mb-2">
                                         {info.value}
                                     </p>
-                                    <p className="text-sm text-[#6b7280]">
+                                    <p className="text-base font-bold italic text-[#6b7280]">
                                         {info.description}
                                     </p>
                                 </div>
@@ -146,125 +117,10 @@ export default function ContactPage() {
                     </div>
                 </section>
 
-                {/* 3. Inquiry Form Section */}
-                <section className="w-full bg-white py-16 md:py-20">
-                    <div className="max-w-2xl mx-auto px-6 lg:px-8">
-                        <div className="text-center mb-10">
-                            <h2 className="text-2xl md:text-3xl font-bold text-[#1f2937] mb-4">
-                                Send Us a Message
-                            </h2>
-                            <p className="text-[#6b7280] leading-relaxed">
-                                Have a question or need clarification? Send us a message and we'll get back to you.
-                            </p>
-                        </div>
-                        <div className="bg-white rounded-2xl p-8 border border-[#e5e7eb] shadow-sm">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Full Name */}
-                                <div>
-                                    <label htmlFor="fullName" className="block text-sm font-semibold text-[#1f2937] mb-2">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="fullName"
-                                        name="fullName"
-                                        value={formData.fullName}
-                                        onChange={handleChange}
-                                        placeholder="Enter your full name"
-                                        className="w-full px-4 py-3 border-2 border-[#e5e7eb] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#059669] focus:border-transparent text-[#1f2937]"
-                                        required
-                                    />
-                                </div>
+                {/* 3. AI Powered FAQ Section (Replaces Inquiry Form) */}
+                <AIFAQSection />
 
-                                {/* Email */}
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-semibold text-[#1f2937] mb-2">
-                                        Email Address
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        placeholder="Enter your email address"
-                                        className="w-full px-4 py-3 border-2 border-[#e5e7eb] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#059669] focus:border-transparent text-[#1f2937]"
-                                        required
-                                    />
-                                </div>
 
-                                {/* Subject */}
-                                <div>
-                                    <label htmlFor="subject" className="block text-sm font-semibold text-[#1f2937] mb-2">
-                                        Subject
-                                    </label>
-                                    <select
-                                        id="subject"
-                                        name="subject"
-                                        value={formData.subject}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-3 border-2 border-[#e5e7eb] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#059669] focus:border-transparent text-[#1f2937] bg-white"
-                                        required
-                                    >
-                                        <option value="" disabled>Select a subject</option>
-                                        <option value="general">General Inquiry</option>
-                                        <option value="enrollment">Enrollment Question</option>
-                                        <option value="course">Course Information</option>
-                                        <option value="partnership">Partnership / Collaboration</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-
-                                {/* Message */}
-                                <div>
-                                    <label htmlFor="message" className="block text-sm font-semibold text-[#1f2937] mb-2">
-                                        Message
-                                    </label>
-                                    <textarea
-                                        id="message"
-                                        name="message"
-                                        value={formData.message}
-                                        onChange={handleChange}
-                                        placeholder="Write your message here..."
-                                        rows={5}
-                                        className="w-full px-4 py-3 border-2 border-[#e5e7eb] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#059669] focus:border-transparent text-[#1f2937] resize-none"
-                                        required
-                                    />
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
-                                    type="submit"
-                                    className="w-full px-6 py-3 bg-[#059669] text-white font-semibold rounded-xl
-                                        transition-all duration-200 ease-out
-                                        hover:bg-[#10b981] hover:shadow-lg
-                                        focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2"
-                                >
-                                    Send Message
-                                </button>
-                            </form>
-                        </div>
-
-                        <p className="text-center text-[#6b7280] mt-6 text-sm">
-                            We aim to respond to all inquiries within a reasonable time. Your information will be handled respectfully and will not be shared.
-                        </p>
-                    </div>
-                </section>
-
-                {/* 5. Call To Action Section */}
-                <section className="w-full bg-[#f0fdf4] py-16 md:py-20">
-                    <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-                        <p className="text-lg md:text-xl text-[#1f2937] mb-6 max-w-2xl mx-auto">
-                            Explore the course structure, learning approach, and modules to see if this program is right for you.
-                        </p>
-                        <button className="px-6 py-3 bg-[#059669] text-white font-semibold rounded-full
-                            transition-all duration-200 ease-out
-                            hover:bg-[#10b981] hover:shadow-lg
-                            focus:outline-none focus:ring-2 focus:ring-[#059669] focus:ring-offset-2">
-                            View Course Modules
-                        </button>
-                    </div>
-                </section>
             </main>
 
             <Footer
